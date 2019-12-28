@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+        <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+        <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css"/>
+
+        <link rel = "stylesheet" type = "text/css" href = "main.css" />
+        <script type="text/javascript" src="main.js"></script>
+    </head>
+
+    <body onload="initialize()">
+        <div id="container">
+            <div id="map"></div>
+            <div id="connection">
+                <div id="child1">
+                    <div id="grand1">
+                        <b>
+                            <font color="#ff0000" face="arial">&bull; You are not connected</font> <br>      <!-- NOT SUPPORTED ON HTML5 -->
+                        </b>
+                        <font color="#000000" face="arial">Pick a country or use quick connect</font>    <!-- NOT SUPPORTED ON HTML5 -->
+                    </div>
+                </div>
+                <div id="child2">
+                    <button id="grand2" onclick="quickConnect()">Quick Connect</button>
+                </div>
+            </div>
+        </div>
+    </body>
+
+</html>

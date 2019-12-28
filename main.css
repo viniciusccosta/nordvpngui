@@ -1,0 +1,99 @@
+body {
+    padding: 0;
+    margin: 0;
+}
+
+#container,
+
+#map {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 1;
+}
+
+#connection {
+    position: absolute;
+    bottom: 5%;
+    left: 25%;
+    z-index: 2;
+
+    width: 50%;
+    height: 10%;
+    
+    box-sizing: border-box;
+
+    background: #efefef;
+    border: 2px solid #aaaaaa;
+    border-radius: 4px;
+}
+
+#child1 {
+    position: absolute;
+    
+    top: 0%;
+    left: 0%;
+    
+    height: 100%;
+    width: 60%;
+    
+    overflow:hidden;
+    
+    box-sizing: border-box;
+    /*padding: 5px;*/
+}
+
+#child2 {
+    position: absolute;
+
+    top: 0%;
+    right: 0%;
+
+    height: 100%;
+    width: 40%;
+
+    overflow:hidden;
+
+    box-sizing: border-box;
+    /*padding: 5px;*/
+}
+
+#grand1 {
+    position: absolute;
+    
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* This is a shorthand of translateX(-50%) and translateY(-50%) */
+    
+    width: 90%;
+    
+    box-sizing: border-box;
+    padding: 0px 0px;
+    
+    font-size: 14px;
+    border: none;
+    color: black;
+    text-align: left;
+    line-height: 1.6;
+}
+
+#grand2 {
+    position: absolute;
+    
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* This is a shorthand of translateX(-50%) and translateY(-50%) */
+    
+    width: 90%;
+    height: 50%;
+    
+    box-sizing: border-box;
+    padding: 5px 10px;
+    
+    font-size: 14px;
+    border: none;
+    color: white;
+    background-color: #3075bb;
+    text-align: center;
+    border-radius: 4px;
+}
