@@ -1830,7 +1830,19 @@
         "name": "Macedonia", 
         "country_code": "MK", 
         "capital": "Skopje"
-    }, 
+    },
+    {
+        "timezones": [
+            "Europe/Skopje"
+        ],
+        "latlng": [
+            41.83333333,
+            22
+        ],
+        "name": "North Macedonia",
+        "country_code": "MK",
+        "capital": "Skopje"
+    },
     {
         "timezones": [
             "Africa/Bamako"

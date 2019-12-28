@@ -1,3 +1,9 @@
+"""
+Credits to:
+    https://gist.github.com/erdem/8c7d26765831d0f9a8c62f02782ae00d
+    <div>Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
+"""
+
 # ======================================================================================================================
 from os import path
 import sys
@@ -7,14 +13,56 @@ from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtWidgets import QSizePolicy, QHBoxLayout, QWidget, QListWidget, QApplication, QListWidgetItem
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtCore import QUrl
+from PyQt5.QtCore import QUrl, pyqtSlot
 
 # ======================================================================================================================
 
 
 class MyPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, QWebEnginePage_JavaScriptConsoleMessageLevel, p_str, p_int, p_str_1):
-        print(f"JAVA SCRIPT CONSOLE MESSAGE: |Linha: {p_int}|Arquivo: {p_str_1}|Output: {p_str}|")
+        print(f"JAVA SCRIPT CONSOLE MESSAGE: |Linha: {p_int}|Arquivo: {p_str_1} |Output: {p_str}|")
+
+    @pyqtSlot(name="quickConnectNordVPN", result=bool)
+    def quickConnectNordVPN(self):
+        print("Connecting (Quick Connect)...")
+        try:
+            output = subprocess.check_output(["nordvpn", "connect"])
+            if output:
+                print("\t", output.decode())
+                return True
+            else:
+                return False
+        except subprocess.SubprocessError as err:
+            print("ERROR", err)
+            return False
+
+    @pyqtSlot(name="disconnectNordVPN", result=bool)
+    def disconnectNordVPN(self):
+        print("Disconnecting...")
+        try:
+            output = subprocess.check_output(["nordvpn", "disconnect"])
+            if output:
+                print("\t", output.decode())
+                return True
+            else:
+                return False
+        except subprocess.SubprocessError as err:
+            print("ERROR", err)
+            return False
+
+    @pyqtSlot(str, name="connectNordVPN", result=bool)
+    def connectNordVPN(self, server):
+        print(f"Connecting to {server}...")
+        try:
+            output = subprocess.check_output(["nordvpn", "connect", server.replace(" ","_")])
+            if output:
+                print("\t", output.decode())
+                return True
+            else:
+                return False
+        except subprocess.SubprocessError as err:
+            print("ERROR", err)
+            return False
 
 
 class MyWindow(QWidget):
@@ -36,6 +84,8 @@ class MyWindow(QWidget):
         vbox = QHBoxLayout()
         self.setLayout(vbox)
 
+        # TODO: Add ToolBar with "Servers" and "Settings" options
+
         # --------------------------------------------------------------------------------------------------------------
         # Server's List:
         self.listWidget = QListWidget()
@@ -46,6 +96,9 @@ class MyWindow(QWidget):
         self.listWidget.itemClicked.connect(self.serverClicked)
         self.listWidget.itemDoubleClicked.connect(self.serverDoubleClicked)
         vbox.addWidget(self.listWidget,)
+
+        # TODO: Change to TreeView
+        # TODO: add special servers (P2P, etc.)
 
         # --------------------------------------------------------------------------------------------------------------
         # WebView:
@@ -74,28 +127,28 @@ class MyWindow(QWidget):
 
     def serverClicked(self, widget):
         print(widget.text(), self.listWidget.currentItem())
-        # TODO: Zoom to position
+        # TODO: Zoom to marker's position ?
 
     def serverDoubleClicked(self, widget):
+        # TODO: "JS --> markerClicked(widget.text())". Let the JS do the "hard work"
         print(widget.text(), self.listWidget.currentItem())
-        try:
-            result = subprocess.check_output(["nordvpn", "connect", widget.text()])
-            print(result.decode())
-            # TODO: If sucess --> call JS and change: HTML button to "Disconnect" and text...
-        except subprocess.SubprocessError as err:
-            print("CONNECTION ERROR", err)
+        # try:
+        #     result = subprocess.check_output(["nordvpn", "connect", widget.text()])
+        #     print(result.decode())
+        # except subprocess.SubprocessError as err:
+        #     print("CONNECTION ERROR", err)
 
     def addServers(self):
         import json
 
         try:
-            result              = subprocess.check_output(["nordvpn","countries"]).decode("utf-8")
+            result              = subprocess.check_output(["nordvpn", "countries"]).decode("utf-8")
             server_countries    = [country.lower().replace("\r", "").replace("-", "").replace("_", " ").strip() for country in result.split(',')]
 
             with open("countries.json", 'r') as json_file:
                 all_countries = json.load(json_file)
 
-                for country in all_countries:
+                for country in sorted(all_countries, key=lambda x: x['name']):
                     country_name = country['name'].lower().replace("_", " ").strip()
 
                     if country_name in server_countries:
@@ -112,16 +165,19 @@ class MyWindow(QWidget):
                         item.setFont(font)
 
                         self.listWidget.addItem(item)
-                        self.page.runJavaScript(f'L.marker([{location[0]},{location[1]}])'
-                                                f'.addTo(map)'
-                                                f'.bindPopup("{server}")')
-
-                # TODO: Should we "L.geoJSON(geojsonFeature).addTo(map);" ? (inside the main.js)
-                # TODO: There is no "North Macedonia" on countries list, but we have a server there...
+                        self.page.runJavaScript(
+                            f'L.marker([{location[0]},{location[1]}])'
+                            f'.addTo(map)'
+                            f'.bindTooltip("{server}")'
+                            f'.on("click", function(e) {{markerClicked(e,"{server}")}});'
+                        )
 
         except subprocess.SubprocessError as e:
             print("ERROR", e)
-            sys.exit("Adding Servers...")
+            sys.exit("Subprocess Error on Adding Servers...")
+        except Exception as e:
+            print("ERROR", e)
+            sys.exit("Adding Servers Fails")
 
 
 # ======================================================================================================================
@@ -139,21 +195,6 @@ if __name__ == "__main__":
 https://stackoverflow.com/questions/56351399/creating-a-open-street-maps-view
 https://gist.github.com/nilsnolde/4dd879a93ae18837aa95f17e1fc4836a
 
-https://gist.github.com/erdem/8c7d26765831d0f9a8c62f02782ae00d                  <-- LIST
-<div>Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
-"""
-
-
-"""
-# @QtCore.pyqtSlot(float, float,)
-# def onMapMove(self, lat, lng):
-#     print(lat, lng)
-
-# --------------------------------------------------------------------------------------------------------------
-# Button:
-
-# button = QtWidgets.QPushButton("Go to Paris")
-# panToParis = functools.partial(self.addMarker, 2.3272, 48.8620)
-# button.clicked.connect(panToParis)
-# vbox.addWidget(button)
+https://wiki.python.org/moin/PyQt/QML%20callback%20function
+https://myprogrammingnotes.com/communication-c-javascript-qt-webengine.html
 """

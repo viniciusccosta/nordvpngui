@@ -28,7 +28,7 @@ body {
     border-radius: 4px;
 }
 
-#child1 {
+#child1 { /* TODO: CHANGE THIS ID */
     position: absolute;
     
     top: 0%;
@@ -43,7 +43,7 @@ body {
     /*padding: 5px;*/
 }
 
-#child2 {
+#child2 { /* TODO: CHANGE THIS ID */
     position: absolute;
 
     top: 0%;
@@ -58,7 +58,7 @@ body {
     /*padding: 5px;*/
 }
 
-#grand1 {
+#grand1 { /* TODO: CHANGE THIS ID */
     position: absolute;
     
     top: 50%;
@@ -77,7 +77,7 @@ body {
     line-height: 1.6;
 }
 
-#grand2 {
+#grand2 { /* TODO: CHANGE THIS ID */
     position: absolute;
     
     top: 50%;
@@ -96,4 +96,5 @@ body {
     background-color: #3075bb;
     text-align: center;
     border-radius: 4px;
+    cursor: pointer;
 }
