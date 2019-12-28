@@ -28,7 +28,7 @@ body {
     border-radius: 4px;
 }
 
-#child1 { /* TODO: CHANGE THIS ID */
+#child1 {
     position: absolute;
     
     top: 0%;
@@ -43,7 +43,7 @@ body {
     /*padding: 5px;*/
 }
 
-#child2 { /* TODO: CHANGE THIS ID */
+#child2 {
     position: absolute;
 
     top: 0%;
@@ -58,7 +58,7 @@ body {
     /*padding: 5px;*/
 }
 
-#grand1 { /* TODO: CHANGE THIS ID */
+#divTxtId {
     position: absolute;
     
     top: 50%;
@@ -77,7 +77,7 @@ body {
     line-height: 1.6;
 }
 
-#grand2 { /* TODO: CHANGE THIS ID */
+#btnId {
     position: absolute;
     
     top: 50%;

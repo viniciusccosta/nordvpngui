@@ -13,20 +13,44 @@ from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtWidgets import QSizePolicy, QHBoxLayout, QWidget, QListWidget, QApplication, QListWidgetItem
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtCore import QUrl, pyqtSlot
+from PyQt5.QtCore import QUrl, pyqtSlot, pyqtSignal
+
 
 # ======================================================================================================================
 
 
 class MyPage(QWebEnginePage):
+    signalConnectServer = pyqtSignal(str)
+    signalConnectionChanged = pyqtSignal(bool)
+
+    # ------------------------------------------------------------------------------------------------------------------
+    def __init__(self):
+        super().__init__()
+        self.m_loading = False
+
     def javaScriptConsoleMessage(self, QWebEnginePage_JavaScriptConsoleMessageLevel, p_str, p_int, p_str_1):
         print(f"JAVA SCRIPT CONSOLE MESSAGE: |Linha: {p_int}|Arquivo: {p_str_1} |Output: {p_str}|")
 
+    # ------------------------------------------------------------------------------------------------------------------
+    # Signal Emitters:
+    def askJStoConnect(self, server):
+        if not self.m_loading:
+            print("EMIT SIGNAL TO JS", server.replace(" ", "_"))
+            self.signalConnectServer.emit(server.replace(" ", "_"))
+        else:
+            print("!!! WAIT !!!")
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # Slots:
     @pyqtSlot(name="quickConnectNordVPN", result=bool)
     def quickConnectNordVPN(self):
         print("Connecting (Quick Connect)...")
+        self.m_loading = True
+
         try:
             output = subprocess.check_output(["nordvpn", "connect"])
+            self.m_loading = False
+
             if output:
                 print("\t", output.decode())
                 return True
@@ -34,13 +58,18 @@ class MyPage(QWebEnginePage):
                 return False
         except subprocess.SubprocessError as err:
             print("ERROR", err)
+            self.m_loading = False
             return False
 
     @pyqtSlot(name="disconnectNordVPN", result=bool)
     def disconnectNordVPN(self):
         print("Disconnecting...")
+        self.m_loading = True
+
         try:
             output = subprocess.check_output(["nordvpn", "disconnect"])
+            self.m_loading = False
+
             if output:
                 print("\t", output.decode())
                 return True
@@ -48,13 +77,18 @@ class MyPage(QWebEnginePage):
                 return False
         except subprocess.SubprocessError as err:
             print("ERROR", err)
+            self.m_loading = False
             return False
 
     @pyqtSlot(str, name="connectNordVPN", result=bool)
     def connectNordVPN(self, server):
         print(f"Connecting to {server}...")
+        self.m_loading = True
+
         try:
-            output = subprocess.check_output(["nordvpn", "connect", server.replace(" ","_")])
+            output = subprocess.check_output(["nordvpn", "connect", server.replace(" ", "_")])
+            self.m_loading = False
+
             if output:
                 print("\t", output.decode())
                 return True
@@ -62,7 +96,24 @@ class MyPage(QWebEnginePage):
                 return False
         except subprocess.SubprocessError as err:
             print("ERROR", err)
+            self.m_loading = False
             return False
+
+    @pyqtSlot(name="getCurrentStatus", result=bool)
+    def getCurrentStatus(self):
+        print("Getting status...")
+        self.m_loading = True
+
+        try:
+            output = subprocess.check_output(["nordvpn", "status"]).decode().lower()
+            self.m_loading = False
+            return "status: connected" in output
+        except subprocess.SubprocessError as err:
+            print("ERROR", err)
+            self.m_loading = False
+            return False
+
+    # ------------------------------------------------------------------------------------------------------------------
 
 
 class MyWindow(QWidget):
@@ -73,7 +124,7 @@ class MyWindow(QWidget):
 
         self.listWidget = None
         self.webview = None
-        self.page = MyPage()
+        self.mypage = MyPage()
         self.channel = None
         self.AbsTrans = None
 
@@ -108,11 +159,11 @@ class MyWindow(QWidget):
         self.webview.setSizePolicy(sp2)
 
         self.webview.loadFinished.connect(self.onLoadFinished)
-        self.webview.setPage(self.page)
+        self.webview.setPage(self.mypage)
 
         self.channel = QWebChannel()
-        self.channel.registerObject("MyPage", self.page)
-        self.page.setWebChannel(self.channel)
+        self.channel.registerObject("MyPage", self.mypage)
+        self.mypage.setWebChannel(self.channel)
 
         file = path.join(path.dirname(path.realpath(__file__)), "main.html",)
         self.webview.setUrl(QUrl.fromLocalFile(file))
@@ -125,18 +176,11 @@ class MyWindow(QWidget):
         if ok:
             self.addServers()
 
-    def serverClicked(self, widget):
-        print(widget.text(), self.listWidget.currentItem())
-        # TODO: Zoom to marker's position ?
-
     def serverDoubleClicked(self, widget):
-        # TODO: "JS --> markerClicked(widget.text())". Let the JS do the "hard work"
-        print(widget.text(), self.listWidget.currentItem())
-        # try:
-        #     result = subprocess.check_output(["nordvpn", "connect", widget.text()])
-        #     print(result.decode())
-        # except subprocess.SubprocessError as err:
-        #     print("CONNECTION ERROR", err)
+        if not self.mypage.m_loading:
+            self.mypage.askJStoConnect(widget.text())
+        else:
+            print("!!! WAIT !!!")
 
     def addServers(self):
         import json
@@ -165,7 +209,7 @@ class MyWindow(QWidget):
                         item.setFont(font)
 
                         self.listWidget.addItem(item)
-                        self.page.runJavaScript(
+                        self.mypage.runJavaScript(
                             f'L.marker([{location[0]},{location[1]}])'
                             f'.addTo(map)'
                             f'.bindTooltip("{server}")'
