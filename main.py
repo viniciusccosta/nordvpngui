@@ -5,12 +5,14 @@ Credits to:
 """
 
 # ======================================================================================================================
+
+
 from os import path
 import sys
 import subprocess
 
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtWidgets import QSizePolicy, QHBoxLayout, QWidget, QListWidget, QApplication, QListWidgetItem
+from PyQt5.QtWidgets import *
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtCore import QUrl, pyqtSlot, pyqtSignal
@@ -32,6 +34,17 @@ class MyPage(QWebEnginePage):
         print(f"JAVA SCRIPT CONSOLE MESSAGE: |Linha: {p_int}|Arquivo: {p_str_1} |Output: {p_str}|")
 
     # ------------------------------------------------------------------------------------------------------------------
+    # Auxiliary:
+    def getConnectionInfo(self):
+        try:
+            output = subprocess.check_output(["nordvpn", "status"], timeout=60)
+            print("\t", output.decode("utf-8"))
+            return output.decode("utf-8")
+        except subprocess.SubprocessError as err:
+            print("ERROR", err)
+            return "ERROR"
+
+    # ------------------------------------------------------------------------------------------------------------------
     # Signal Emitters:
     def askJStoConnect(self, server):
         if not self.m_loading:
@@ -48,14 +61,16 @@ class MyPage(QWebEnginePage):
         self.m_loading = True
 
         try:
-            output = subprocess.check_output(["nordvpn", "connect"])
-            self.m_loading = False
+            output = subprocess.check_output(["nordvpn", "connect"], timeout=60)
 
             if output:
                 print("\t", output.decode())
+                updateSystemTray(self.getConnectionInfo())
+                self.m_loading = False
                 return True
             else:
                 return False
+
         except subprocess.SubprocessError as err:
             print("ERROR", err)
             self.m_loading = False
@@ -67,14 +82,16 @@ class MyPage(QWebEnginePage):
         self.m_loading = True
 
         try:
-            output = subprocess.check_output(["nordvpn", "disconnect"])
+            output = subprocess.check_output(["nordvpn", "disconnect"], timeout=60)
             self.m_loading = False
 
             if output:
                 print("\t", output.decode())
+                updateSystemTray()
                 return True
             else:
                 return False
+
         except subprocess.SubprocessError as err:
             print("ERROR", err)
             self.m_loading = False
@@ -86,14 +103,16 @@ class MyPage(QWebEnginePage):
         self.m_loading = True
 
         try:
-            output = subprocess.check_output(["nordvpn", "connect", server.replace(" ", "_")])
-            self.m_loading = False
+            output = subprocess.check_output(["nordvpn", "connect", server.replace(" ", "_")], timeout=60)
 
             if output:
                 print("\t", output.decode())
+                updateSystemTray(self.getConnectionInfo())
+                self.m_loading = False
                 return True
             else:
                 return False
+
         except subprocess.SubprocessError as err:
             print("ERROR", err)
             self.m_loading = False
@@ -105,9 +124,15 @@ class MyPage(QWebEnginePage):
         self.m_loading = True
 
         try:
-            output = subprocess.check_output(["nordvpn", "status"]).decode().lower()
+            output = self.getConnectionInfo()
             self.m_loading = False
-            return "status: connected" in output
+            if "status: connected" in output.lower():
+                updateSystemTray(output)
+                return True
+            else:
+                updateSystemTray()
+                return False
+
         except subprocess.SubprocessError as err:
             print("ERROR", err)
             self.m_loading = False
@@ -127,6 +152,7 @@ class MyWindow(QWidget):
         self.mypage = MyPage()
         self.channel = None
         self.AbsTrans = None
+        self.overlay = None
 
         self.setupUi()
 
@@ -144,7 +170,6 @@ class MyWindow(QWidget):
         sp1.setHorizontalStretch(1)
         self.listWidget.setSizePolicy(sp1)
 
-        self.listWidget.itemClicked.connect(self.serverClicked)
         self.listWidget.itemDoubleClicked.connect(self.serverDoubleClicked)
         vbox.addWidget(self.listWidget,)
 
@@ -172,6 +197,10 @@ class MyWindow(QWidget):
 
         # --------------------------------------------------------------------------------------------------------------
 
+        # TODO: URGENT !!! Add LOADING OVERLAY !!! or at least a MessageBox...
+
+        # --------------------------------------------------------------------------------------------------------------
+
     def onLoadFinished(self, ok):
         if ok:
             self.addServers()
@@ -186,7 +215,7 @@ class MyWindow(QWidget):
         import json
 
         try:
-            result              = subprocess.check_output(["nordvpn", "countries"]).decode("utf-8")
+            result              = subprocess.check_output(["nordvpn", "countries"], timeout=60).decode("utf-8")
             server_countries    = [country.lower().replace("\r", "").replace("-", "").replace("_", " ").strip() for country in result.split(',')]
 
             with open("countries.json", 'r') as json_file:
@@ -227,10 +256,84 @@ class MyWindow(QWidget):
 # ======================================================================================================================
 
 
+def openPressed():
+    my_window.showMaximized()
+
+
+def exitPressed():
+    sys.exit(0)
+
+
+def createSystemTray():
+    global app
+    global trayIcon
+    global actions
+
+    # ------------------------------------------------------
+    # Application:
+    app.setQuitOnLastWindowClosed(False)
+
+    # ------------------------------------------------------
+    # Icon:
+    trayIcon = QSystemTrayIcon()
+    trayIcon.setIcon(QIcon("./icons/nordvpn-gray.png"))
+    trayIcon.show()
+
+    # ------------------------------------------------------
+    # Menu:
+    menu = QMenu()
+
+    # ------------------------------------------------------
+    # Mennu Items:
+    for dic in actions.values():
+        action = dic["action"]
+        action.triggered.connect(dic["target"])
+        action.setEnabled(True)
+        menu.addAction(action)
+
+    # ------------------------------------------------------
+    # Add Menu:
+    trayIcon.setContextMenu(menu)
+
+
+def updateSystemTray(tooltip_txt=None):
+    if tooltip_txt:
+        trayIcon.setIcon(QIcon("./icons/nordvpn.png"))
+        trayIcon.setToolTip(tooltip_txt)
+    else:
+        trayIcon.setIcon(QIcon("./icons/nordvpn-gray.png"))
+        trayIcon.setToolTip("Disconnected")
+
+
+# ======================================================================================================================
+
+
+trayIcon = None
+app = None
+my_window = None
+actions = {
+    "Quick Connect": {
+        "action": QAction("Open"),
+        "target": openPressed,
+    },
+    "Disconnect": {
+        "action": QAction("Exit"),
+        "target": exitPressed,
+    },
+}
+
+
+# ======================================================================================================================
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    w = MyWindow()
-    w.showMaximized()
+
+    my_window = MyWindow()
+    my_window.showMaximized()
+
+    createSystemTray()              # TODO: It should be inside some class...
+
     sys.exit(app.exec_())
 
 

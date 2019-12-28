@@ -17,7 +17,7 @@ function initialize(){
             MyPage.getCurrentStatus(
                 function(result){
                     console.log("Current Status (connected): " + result);
-                    if(result !== null){ updateHTML(result); }                  // TODO: Receive current server to update HTML (or null otherwise)
+                    if(result !== null){ updateHTML(result); }                  // TODO: Get server's info and update HTML
                 }
             );
 
